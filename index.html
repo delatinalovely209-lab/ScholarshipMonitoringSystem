@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Scholarship Monitoring & Compliance System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="js/tailwind-config.js"></script>
+    <link rel="stylesheet" href="css/app.css">
+</head>
+
+<body class="h-full font-sans antialiased text-slate-800 flex flex-col">
+
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none">
+    </div>
+
+    <header class="bg-navy-900 text-white shadow-md sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-brand-600 text-white p-2 rounded-lg flex items-center justify-center">
+                        <i class="fa-solid font-bold fa-graduation-cap text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold leading-tight">ScholarTrack Pro</h1>
+                        <p class="text-xs text-slate-400 hidden sm:block">Scholarship Monitoring & Academic Compliance
+                            System</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-3">
+                    <div
+                        class="hidden lg:flex items-center space-x-2 bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700 text-xs">
+                        <i class="fa-regular fa-clock text-amber-400"></i>
+                        <span>Deadline: <strong class="text-amber-300">Oct 30, 2026, 5:00 PM PHT</strong></span>
+                    </div>
+
+                    <div
+                        class="flex items-center bg-slate-800 rounded-lg p-1 border border-slate-700 text-xs font-medium">
+                        <label for="role-select" class="sr-only">Switch Role</label>
+                        <span class="text-slate-400 px-2 hidden sm:inline"><i
+                                class="fa-solid fa-user-gear mr-1"></i>Role:</span>
+                        <select id="role-select" onchange="switchRole(this.value)"
+                            class="bg-slate-900 text-white border-0 rounded px-2 py-1 text-xs focus:ring-1 focus:ring-brand-500 cursor-pointer">
+                            <option value="student">Student View</option>
+                            <option value="staff">Staff/Evaluator View</option>
+                            <option value="admin">Admin Dashboard</option>
+                        </select>
+                    </div>
+
+                    <button onclick="toggleModal('supabase-modal', true)"
+                        class="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-lg transition"
+                        title="Supabase Database Settings">
+                        <i class="fa-solid fa-database text-sm"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="bg-white border-b border-slate-200 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex space-x-6 text-sm font-medium" id="role-tabs">
+            </div>
+        </div>
+    </div>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 custom-scrollbar overflow-y-auto">
+
+        <div id="view-student" class="role-view space-y-6">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2">
+                <label for="student-selector" class="text-xs font-semibold text-slate-600">Student record</label>
+                <select id="student-selector" onchange="selectStudent(this.value)"
+                    class="w-full sm:w-72 text-sm border border-slate-300 rounded-lg p-2.5 bg-white">
+                </select>
+            </div>
+            <div
+                class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="flex items-center space-x-4">
+                    <div class="w-14 h-14 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-bold text-xl border-2 border-brand-500"
+                        id="student-avatar">
+                        JD
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <h2 class="text-xl font-bold text-slate-800" id="student-name">Jane Doe</h2>
+                            <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full"
+                                id="student-program-badge">Merit Scholar</span>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-0.5">Student ID: <span
+                                id="student-id-display">2024-00129</span> | Course: BS Information Technology</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3 text-center">
+                    <div class="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                        <div class="text-xs text-slate-500 uppercase font-semibold">Verification</div>
+                        <div class="text-sm font-bold mt-1" id="student-verify-status"><span
+                                class="px-2 py-0.5 rounded text-xs bg-amber-100 text-amber-800">Pending</span></div>
+                    </div>
+                    <div class="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                        <div class="text-xs text-slate-500 uppercase font-semibold">Compliance</div>
+                        <div class="text-sm font-bold mt-1" id="student-compliance-status"><span
+                                class="px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-700">Pending Eval</span>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                        <div class="text-xs text-slate-500 uppercase font-semibold">Renewal</div>
+                        <div class="text-sm font-bold mt-1" id="student-renewal-status"><span
+                                class="px-2 py-0.5 rounded text-xs bg-slate-100 text-slate-700">Pending</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="bg-slate-800 text-white px-6 py-4 flex items-center justify-between">
+                            <h3 class="font-semibold text-base flex items-center gap-2">
+                                <i class="fa-solid fa-file-arrow-up text-brand-500"></i> Submit Academic Requirements
+                            </h3>
+                            <span class="text-xs bg-slate-700 text-slate-300 px-2.5 py-1 rounded">1st Semester
+                                2026-2027</span>
+                        </div>
+
+                            <div id="student-registration-notice"
+                                class="hidden mx-6 mt-5 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900"></div>
+                            <form id="submission-form" onsubmit="handleStudentSubmission(event)" class="p-6 space-y-5">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1">Scholarship
+                                        Program</label>
+                                    <select id="form-program"
+                                        class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500 focus:outline-none bg-slate-50"
+                                        disabled>
+                                        <option value="Merit Scholar">Merit Scholar</option>
+                                        <option value="Community Scholar">Community Scholar</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1">Academic Term /
+                                        Semester</label>
+                                    <input type="text" value="1st Semester 2026-2027" readonly
+                                        class="w-full text-sm border border-slate-300 rounded-lg p-2.5 bg-slate-100 text-slate-600">
+                                </div>
+                            </div>
+
+                            <div
+                                class="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1">GWA / GPA <span
+                                            class="text-red-500">*</span></label>
+                                    <input type="number" step="0.01" min="1.00" max="5.00" id="form-gwa" required
+                                        placeholder="e.g. 1.50"
+                                        class="w-full text-sm border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-brand-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1">Enrolled Units <span
+                                            class="text-red-500">*</span></label>
+                                    <input type="number" id="form-units" min="1" max="36" required placeholder="e.g. 18"
+                                        class="w-full text-sm border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-brand-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1">Failed Subjects <span
+                                            class="text-red-500">*</span></label>
+                                    <input type="number" id="form-failed" min="0" required value="0"
+                                        class="w-full text-sm border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-brand-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1">Incomplete (INC)
+                                        <span class="text-red-500">*</span></label>
+                                    <input type="number" id="form-inc" min="0" required value="0"
+                                        class="w-full text-sm border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-brand-500">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1">Dropped Subjects
+                                        <span class="text-red-500">*</span></label>
+                                    <input type="number" id="form-dropped" min="0" required value="0"
+                                        class="w-full text-sm border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-brand-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-700 mb-1">Grade Document Ref /
+                                        Link <span class="text-red-500">*</span></label>
+                                    <input type="url" id="form-doc-ref" required
+                                        placeholder="https://drive.google.com/..."
+                                        class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500">
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">Notes / Remarks for
+                                    Evaluator</label>
+                                <textarea id="form-notes" rows="2"
+                                    placeholder="Optional comments regarding your grades or special circumstances..."
+                                    class="w-full text-sm border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500"></textarea>
+                            </div>
+
+                            <div
+                                class="pt-3 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                                <div class="text-xs text-slate-500 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-circle-info text-brand-600"></i>
+                                    <span>Deadline Enforcement: <strong>Oct 30, 2026 @ 5:00 PM PHT</strong></span>
+                                </div>
+                                <button type="submit"
+                                    class="w-full sm:w-auto bg-brand-600 hover:bg-brand-700 text-white font-medium text-sm px-6 py-2.5 rounded-lg shadow-sm transition flex items-center justify-center gap-2">
+                                    <i class="fa-solid fa-paper-plane"></i> Submit Requirements
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                            <h3 class="font-semibold text-slate-800 text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-clock-rotate-left text-slate-500"></i> Submission & Verification
+                                History
+                            </h3>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-xs">
+                                <thead>
+                                    <tr
+                                        class="bg-slate-50 text-slate-500 uppercase border-b border-slate-200 font-semibold">
+                                        <th class="p-3">Submitted At</th>
+                                        <th class="p-3">GWA / Units</th>
+                                        <th class="p-3">Timing</th>
+                                        <th class="p-3">Verification</th>
+                                        <th class="p-3">Compliance</th>
+                                        <th class="p-3">Renewal Decision</th>
+                                        <th class="p-3 text-right">Document</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="student-history-tbody" class="divide-y divide-slate-100">
+
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                        <h3
+                            class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2 border-b border-slate-100 pb-2">
+                            <i class="fa-solid fa-book-bookmark text-brand-600"></i> Academic Criteria Comparison
+                        </h3>
+
+                        <div class="space-y-4 text-xs">
+                            <div class="p-3 rounded-lg border border-blue-200 bg-blue-50/50">
+                                <div class="flex items-center justify-between font-bold text-blue-900 mb-1.5">
+                                    <span>Merit Scholar</span>
+                                    <span
+                                        class="text-[10px] bg-blue-200 text-blue-800 px-2 py-0.5 rounded">Strict</span>
+                                </div>
+                                <ul class="space-y-1 text-slate-600">
+                                    <li class="flex justify-between"><span>Max GWA permitted:</span> <strong
+                                            id="student-merit-max-gwa" class="text-slate-800">1.75</strong></li>
+                                    <li class="flex justify-between"><span>Min Enrolled Units:</span> <strong
+                                            id="student-merit-min-units" class="text-slate-800">18 units</strong></li>
+                                    <li class="flex justify-between"><span>Failed Subjects:</span> <strong
+                                            id="student-merit-max-failed" class="text-slate-800">0</strong></li>
+                                    <li class="flex justify-between"><span>Incomplete (INC):</span> <strong
+                                            id="student-merit-max-inc" class="text-slate-800">0</strong></li>
+                                    <li class="flex justify-between"><span>Dropped Subjects:</span> <strong
+                                            id="student-merit-max-dropped" class="text-slate-800">0</strong></li>
+                                </ul>
+                            </div>
+
+                            <div class="p-3 rounded-lg border border-emerald-200 bg-emerald-50/50">
+                                <div class="flex items-center justify-between font-bold text-emerald-900 mb-1.5">
+                                    <span>Community Scholar</span>
+                                    <span
+                                        class="text-[10px] bg-emerald-200 text-emerald-800 px-2 py-0.5 rounded">Standard</span>
+                                </div>
+                                <ul class="space-y-1 text-slate-600">
+                                    <li class="flex justify-between"><span>Max GWA permitted:</span> <strong
+                                            id="student-community-max-gwa" class="text-slate-800">2.25</strong></li>
+                                    <li class="flex justify-between"><span>Min Enrolled Units:</span> <strong
+                                            id="student-community-min-units" class="text-slate-800">15 units</strong></li>
+                                    <li class="flex justify-between"><span>Failed Subjects:</span> <strong
+                                            id="student-community-max-failed" class="text-slate-800">0</strong></li>
+                                    <li class="flex justify-between"><span>Incomplete (INC):</span> <strong
+                                            id="student-community-max-inc" class="text-slate-800">0</strong></li>
+                                    <li class="flex justify-between"><span>Dropped Subjects:</span> <strong
+                                            id="student-community-max-dropped" class="text-slate-800">1</strong></li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500 space-y-1.5">
+                            <p class="font-semibold text-slate-700"><i
+                                    class="fa-solid fa-triangle-exclamation text-amber-500 mr-1"></i> Important
+                                Guidelines:</p>
+                            <p>1. Document verification happens prior to formal evaluation.</p>
+                            <p>2. A verified document does not guarantee compliance if GPA or unit criteria are missed.
+                            </p>
+                            <p>3. Renewal cannot be approved if verification is pending/returned or if deficiencies
+                                exist.</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+
+        <div id="view-staff" class="role-view space-y-6 hidden">
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-5 border-b border-slate-200">
+                    <h2 class="text-lg font-bold text-slate-800">Student Registration Confirmation</h2>
+                    <p class="text-xs text-slate-500 mt-1">Confirm the student record, then assign the scholarship program the student qualifies for. Students cannot submit requirements before confirmation.</p>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 uppercase border-b border-slate-200 font-semibold">
+                                <th class="p-3">Student ID</th>
+                                <th class="p-3">Name</th>
+                                <th class="p-3">Email</th>
+                                <th class="p-3">Qualified Program</th>
+                                <th class="p-3">Review Remarks</th>
+                                <th class="p-3 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="staff-registration-tbody" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800">Scholarship Evaluation & Compliance Queue</h2>
+                        <p class="text-xs text-slate-500">Review submitted academic records, verify authenticity,
+                            evaluate criteria, and issue renewal decisions.</p>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <input type="text" id="staff-search" oninput="renderStaffQueue()"
+                            placeholder="Search student name or ID..."
+                            class="text-xs border border-slate-300 rounded-lg px-3 py-2 w-48 focus:ring-2 focus:ring-brand-500">
+
+                        <select id="staff-filter-program" onchange="renderStaffQueue()"
+                            class="text-xs border border-slate-300 rounded-lg px-2.5 py-2 bg-white">
+                            <option value="ALL">All Programs</option>
+                            <option value="Merit Scholar">Merit Scholar</option>
+                            <option value="Community Scholar">Community Scholar</option>
+                        </select>
+
+                        <select id="staff-filter-verify" onchange="renderStaffQueue()"
+                            class="text-xs border border-slate-300 rounded-lg px-2.5 py-2 bg-white">
+                            <option value="ALL">All Verification</option>
+                            <option value="Pending">Verification: Pending</option>
+                            <option value="Verified">Verification: Verified</option>
+                            <option value="Returned">Verification: Returned</option>
+                        </select>
+
+                        <select id="staff-filter-compliance" onchange="renderStaffQueue()"
+                            class="text-xs border border-slate-300 rounded-lg px-2.5 py-2 bg-white">
+                            <option value="ALL">All Compliance</option>
+                            <option value="Pending Evaluation">Pending Eval</option>
+                            <option value="Compliant">Compliant</option>
+                            <option value="With Deficiency">With Deficiency</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                    <div class="bg-amber-50 border border-amber-200 rounded-lg p-3 flex justify-between items-center">
+                        <div>
+                            <div class="text-amber-800 font-medium">Pending Verification</div>
+                            <div class="text-lg font-bold text-amber-900" id="cnt-pending-verify">0</div>
+                        </div>
+                        <i class="fa-solid fa-file-signature text-amber-400 text-xl"></i>
+                    </div>
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 flex justify-between items-center">
+                        <div>
+                            <div class="text-blue-800 font-medium">Pending Evaluation</div>
+                            <div class="text-lg font-bold text-blue-900" id="cnt-pending-eval">0</div>
+                        </div>
+                        <i class="fa-solid fa-clipboard-check text-blue-400 text-xl"></i>
+                    </div>
+                    <div
+                        class="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex justify-between items-center">
+                        <div>
+                            <div class="text-emerald-800 font-medium">Compliant Scholars</div>
+                            <div class="text-lg font-bold text-emerald-900" id="cnt-compliant">0</div>
+                        </div>
+                        <i class="fa-solid fa-user-check text-emerald-400 text-xl"></i>
+                    </div>
+                    <div class="bg-rose-50 border border-rose-200 rounded-lg p-3 flex justify-between items-center">
+                        <div>
+                            <div class="text-rose-800 font-medium">With Deficiencies</div>
+                            <div class="text-lg font-bold text-rose-900" id="cnt-deficiency">0</div>
+                        </div>
+                        <i class="fa-solid fa-triangle-exclamation text-rose-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 uppercase border-b border-slate-200 font-semibold">
+                                <th class="p-3">Student</th>
+                                <th class="p-3">Program</th>
+                                <th class="p-3">Submitted Metric</th>
+                                <th class="p-3">Timing</th>
+                                <th class="p-3">Verification Status</th>
+                                <th class="p-3">Academic Compliance</th>
+                                <th class="p-3">Renewal Decision</th>
+                                <th class="p-3 text-center">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="staff-queue-tbody" class="divide-y divide-slate-100">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+
+        <div id="view-admin" class="role-view space-y-6 hidden">
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div
+                    class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <div class="text-xs text-slate-500 font-semibold uppercase">Total Registered Scholars</div>
+                        <div class="text-2xl font-bold text-slate-800 mt-1" id="admin-stat-total">0</div>
+                        <div class="text-[11px] text-slate-400 mt-0.5">Across all programs</div>
+                    </div>
+                    <div
+                        class="w-12 h-12 bg-slate-100 text-slate-700 rounded-xl flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                </div>
+
+                <div
+                    class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <div class="text-xs text-slate-500 font-semibold uppercase">Verification Rate</div>
+                        <div class="text-2xl font-bold text-emerald-600 mt-1" id="admin-stat-verified-rate">0%</div>
+                        <div class="text-[11px] text-slate-400 mt-0.5">Documents processed</div>
+                    </div>
+                    <div
+                        class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-file-circle-check"></i>
+                    </div>
+                </div>
+
+                <div
+                    class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <div class="text-xs text-slate-500 font-semibold uppercase">Compliance Rate</div>
+                        <div class="text-2xl font-bold text-brand-600 mt-1" id="admin-stat-compliance-rate">0%</div>
+                        <div class="text-[11px] text-slate-400 mt-0.5">Met academic criteria</div>
+                    </div>
+                    <div
+                        class="w-12 h-12 bg-blue-50 text-brand-600 rounded-xl flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </div>
+                </div>
+
+                <div
+                    class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
+                    <div>
+                        <div class="text-xs text-slate-500 font-semibold uppercase">Approved Renewals</div>
+                        <div class="text-2xl font-bold text-indigo-600 mt-1" id="admin-stat-approved">0</div>
+                        <div class="text-[11px] text-slate-400 mt-0.5">Scholarships granted extension</div>
+                    </div>
+                    <div
+                        class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-lg">
+                        <i class="fa-solid fa-award"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-chart-pie text-brand-600"></i> Renewal & Compliance Distribution
+                        </h3>
+                        <button onclick="exportSummaryCSV()"
+                            class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 font-medium">
+                            <i class="fa-solid fa-download"></i> Export Report (CSV)
+                        </button>
+                    </div>
+                    <div class="h-64 relative">
+                        <canvas id="adminAnalyticsChart"></canvas>
+                    </div>
+                </div>
+
+
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
+                    <h3 class="font-bold text-slate-800 text-sm mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-sliders text-brand-600"></i> Scholarship Policy Rule Config
+                    </h3>
+                    <p class="text-xs text-slate-500 mb-4">Configure threshold criteria for automatic evaluation
+                        compliance engine.</p>
+
+                    <form onsubmit="handleConfigUpdate(event)" class="space-y-4">
+
+                        <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs space-y-2">
+                            <div class="font-bold text-slate-800 flex items-center justify-between">
+                                <span>Merit Scholar Criteria</span>
+                                <span class="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded">Active</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="text-[11px] text-slate-500">Max GWA Allowed</label>
+                                    <input type="number" step="0.01" min="1" max="5" id="cfg-merit-gwa"
+                                        class="w-full text-xs p-1.5 border rounded">
+                                </div>
+                                <div>
+                                    <label class="text-[11px] text-slate-500">Min Units Required</label>
+                                    <input type="number" min="0" id="cfg-merit-units"
+                                        class="w-full text-xs p-1.5 border rounded">
+                                </div>
+                                <div>
+                                    <label class="text-[11px] text-slate-500">Max Failed Subjects</label>
+                                    <input type="number" min="0" id="cfg-merit-failed"
+                                        class="w-full text-xs p-1.5 border rounded">
+                                </div>
+                                <div>
+                                    <label class="text-[11px] text-slate-500">Max INC Grades</label>
+                                    <input type="number" min="0" id="cfg-merit-inc"
+                                        class="w-full text-xs p-1.5 border rounded">
+                                </div>
+                                <div>
+                                    <label class="text-[11px] text-slate-500">Max Dropped Subjects</label>
+                                    <input type="number" min="0" id="cfg-merit-dropped"
+                                        class="w-full text-xs p-1.5 border rounded">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs space-y-2">
+                            <div class="font-bold text-slate-800 flex items-center justify-between">
+                                <span>Community Scholar Criteria</span>
+                                <span
+                                    class="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded">Active</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="text-[11px] text-slate-500">Max GWA Allowed</label>
+                                    <input type="number" step="0.01" min="1" max="5" id="cfg-comm-gwa"
+                                        class="w-full text-xs p-1.5 border rounded">
+                                </div>
+                                <div>
+                                    <label class="text-[11px] text-slate-500">Min Units Required</label>
+                                    <input type="number" min="0" id="cfg-comm-units"
+                                        class="w-full text-xs p-1.5 border rounded">
+                                </div>
+                                <div>
+                                    <label class="text-[11px] text-slate-500">Max Failed Subjects</label>
+                                    <input type="number" min="0" id="cfg-comm-failed"
+                                        class="w-full text-xs p-1.5 border rounded">
+                                </div>
+                                <div>
+                                    <label class="text-[11px] text-slate-500">Max INC Grades</label>
+                                    <input type="number" min="0" id="cfg-comm-inc"
+                                        class="w-full text-xs p-1.5 border rounded">
+                                </div>
+                                <div>
+                                    <label class="text-[11px] text-slate-500">Max Dropped Allowed</label>
+                                    <input type="number" min="0" id="cfg-comm-dropped"
+                                        class="w-full text-xs p-1.5 border rounded">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit"
+                            class="w-full bg-slate-800 hover:bg-slate-900 text-white text-xs font-medium py-2 rounded-lg transition">
+                            Save Policy Rule Parameters
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-5 border-b border-slate-200">
+                    <h3 class="font-bold text-slate-800 text-sm mb-1">Register a Student</h3>
+                    <p class="text-xs text-slate-500 mb-4">Create a pending student record. Staff must confirm the student and assign a qualified scholarship program. This does not create login credentials.</p>
+                    <form id="student-create-form" onsubmit="createStudent(event)"
+                        class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+                        <div>
+                            <label for="new-student-id" class="block text-xs font-semibold text-slate-700 mb-1">Student ID</label>
+                            <input id="new-student-id" type="text" required maxlength="50"
+                                class="w-full text-sm border border-slate-300 rounded-lg p-2">
+                        </div>
+                        <div>
+                            <label for="new-student-name" class="block text-xs font-semibold text-slate-700 mb-1">Full name</label>
+                            <input id="new-student-name" type="text" required maxlength="150"
+                                class="w-full text-sm border border-slate-300 rounded-lg p-2">
+                        </div>
+                        <div>
+                            <label for="new-student-email" class="block text-xs font-semibold text-slate-700 mb-1">Email</label>
+                            <input id="new-student-email" type="email" maxlength="254"
+                                class="w-full text-sm border border-slate-300 rounded-lg p-2">
+                        </div>
+                        <button type="submit"
+                            class="bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold py-2 rounded-lg">
+                            Add Pending Student
+                        </button>
+                    </form>
+                </div>
+                <div class="p-4 border-b border-slate-200 flex items-center justify-between">
+                    <h3 class="font-bold text-slate-800 text-sm">Registered Scholar Master Directory</h3>
+                    <button onclick="resetSystemData()" class="text-xs text-rose-600 hover:text-rose-800 font-medium">
+                        <i class="fa-solid fa-arrows-rotate mr-1"></i> Reload / Reset Data
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-50 text-slate-500 uppercase border-b border-slate-200 font-semibold">
+                                <th class="p-3">Student ID</th>
+                                <th class="p-3">Full Name</th>
+                                <th class="p-3">Registration</th>
+                                <th class="p-3">Program</th>
+                                <th class="p-3">Verification</th>
+                                <th class="p-3">Compliance</th>
+                                <th class="p-3">Renewal Decision</th>
+                                <th class="p-3 text-right">System ID</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-roster-tbody" class="divide-y divide-slate-100">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <div id="review-modal"
+        class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+        <div
+            class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden transform transition-all flex flex-col max-h-[90vh]">
+            <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+                <div class="flex items-center space-x-2">
+                    <i class="fa-solid fa-microscope text-brand-500"></i>
+                    <h3 class="font-bold text-base">Academic Record Evaluation & Review</h3>
+                </div>
+                <button onclick="toggleModal('review-modal', false)" class="text-slate-400 hover:text-white text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-6 overflow-y-auto space-y-5 custom-scrollbar text-xs">
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 flex justify-between items-center">
+                    <div>
+                        <h4 class="font-bold text-slate-800 text-sm" id="rev-student-name">Jane Doe</h4>
+                        <p class="text-slate-500">ID: <span id="rev-student-id">2024-00129</span> | Program: <strong
+                                id="rev-student-program" class="text-brand-600">Merit Scholar</strong></p>
+                    </div>
+                    <div class="text-right">
+                        <span id="rev-timing-badge"
+                            class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800">On
+                            Time</span>
+                        <div class="text-[10px] text-slate-400 mt-1" id="rev-submitted-at">2026-10-25 02:30 PM</div>
+                    </div>
+                </div>
+
+                <div>
+                    <h5
+                        class="font-bold text-slate-800 text-xs mb-2 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-list-check text-brand-600"></i> Rule Engine Compliance Check
+                    </h5>
+                    <div class="border border-slate-200 rounded-lg overflow-hidden">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-100 text-slate-600 font-semibold">
+                                    <th class="p-2.5">Criteria Parameter</th>
+                                    <th class="p-2.5">Submitted Value</th>
+                                    <th class="p-2.5">Program Standard Rule</th>
+                                    <th class="p-2.5 text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rev-rule-breakdown" class="divide-y divide-slate-100">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                        <label class="font-semibold text-slate-700 block mb-1">Submitted Document Reference:</label>
+                        <a id="rev-doc-link" href="#" target="_blank"
+                            class="text-brand-600 font-medium hover:underline flex items-center gap-1 truncate">
+                            <i class="fa-solid fa-external-link text-xs"></i> <span id="rev-doc-text">https://...</span>
+                        </a>
+                    </div>
+                    <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                        <label class="font-semibold text-slate-700 block mb-1">Student Notes:</label>
+                        <p id="rev-student-notes" class="text-slate-600 italic">No notes provided.</p>
+                    </div>
+                </div>
+
+                <hr class="border-slate-200">
+
+                <div class="space-y-4">
+                    <div class="space-y-1.5">
+                        <label class="font-bold text-slate-800 block">Step 1: Document Verification Status</label>
+                        <div class="flex space-x-3">
+                            <label
+                                class="flex items-center space-x-2 border rounded-lg p-2.5 cursor-pointer flex-1 bg-white hover:bg-slate-50">
+                                <input type="radio" name="rev-verify" value="Verified"
+                                    class="text-brand-600 focus:ring-brand-500">
+                                <span class="font-medium text-slate-700">Mark as Verified</span>
+                            </label>
+                            <label
+                                class="flex items-center space-x-2 border rounded-lg p-2.5 cursor-pointer flex-1 bg-white hover:bg-slate-50">
+                                <input type="radio" name="rev-verify" value="Returned"
+                                    class="text-rose-600 focus:ring-rose-500">
+                                <span class="font-medium text-slate-700">Return Document</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="font-bold text-slate-800 block">Step 2: Academic Compliance Evaluation</label>
+                        <div class="flex space-x-3">
+                            <label
+                                class="flex items-center space-x-2 border rounded-lg p-2.5 cursor-pointer flex-1 bg-white hover:bg-slate-50">
+                                <input type="radio" name="rev-compliance" value="Compliant"
+                                    class="text-emerald-600 focus:ring-emerald-500">
+                                <span class="font-medium text-slate-700">Compliant</span>
+                            </label>
+                            <label
+                                class="flex items-center space-x-2 border rounded-lg p-2.5 cursor-pointer flex-1 bg-white hover:bg-slate-50">
+                                <input type="radio" name="rev-compliance" value="With Deficiency"
+                                    class="text-amber-600 focus:ring-amber-500">
+                                <span class="font-medium text-slate-700">With Deficiency</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                        <label class="font-bold text-slate-800 block">Step 3: Scholarship Renewal Decision</label>
+                        <p class="text-[11px] text-slate-500 mb-2">Note: Staff cannot approve renewal if verification is
+                            not "Verified" or if academic compliance is "With Deficiency".</p>
+                        <div class="flex space-x-3">
+                            <label
+                                class="flex items-center space-x-2 border rounded-lg p-2.5 cursor-pointer flex-1 bg-white hover:bg-slate-50">
+                                <input type="radio" name="rev-renewal" value="Approved"
+                                    class="text-brand-600 focus:ring-brand-500">
+                                <span class="font-medium text-slate-800">Approve Renewal</span>
+                            </label>
+                            <label
+                                class="flex items-center space-x-2 border rounded-lg p-2.5 cursor-pointer flex-1 bg-white hover:bg-slate-50">
+                                <input type="radio" name="rev-renewal" value="Held"
+                                    class="text-amber-600 focus:ring-amber-500">
+                                <span class="font-medium text-slate-800">Hold Renewal</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="font-semibold text-slate-700 block mb-1">Evaluator Remarks / Return Reason</label>
+                        <textarea id="rev-staff-remarks" rows="2"
+                            placeholder="Explain findings or state reason for returning/holding..."
+                            class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-brand-500"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-slate-100 px-6 py-3 border-t border-slate-200 flex items-center justify-end space-x-3">
+                <button onclick="toggleModal('review-modal', false)"
+                    class="px-4 py-2 text-xs font-medium text-slate-600 hover:text-slate-800">Cancel</button>
+                <button onclick="saveStaffEvaluation()"
+                    class="bg-brand-600 hover:bg-brand-700 text-white font-medium text-xs px-5 py-2 rounded-lg transition shadow-sm">Save
+                    Decision</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="supabase-modal"
+        class="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
+            <div class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between">
+                <h3 class="font-bold text-sm flex items-center gap-2"><i
+                        class="fa-solid fa-database text-brand-500"></i> Supabase Integration Settings</h3>
+                <button onclick="toggleModal('supabase-modal', false)" class="text-slate-400 hover:text-white"><i
+                        class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-6 space-y-4 text-xs">
+                <p class="text-slate-600">Provide your Supabase URL & Anon Key to connect directly with PostgreSQL
+                    backend. If left empty, application seamlessly uses local browser storage.</p>
+                <div>
+                    <label class="font-semibold text-slate-700 block mb-1">Supabase Project URL</label>
+                    <input type="url" id="sp-url" placeholder="https://uilukbjngzdgyjtuwooc.supabase.co"
+                        class="w-full border border-slate-300 rounded-lg p-2.5">
+                </div>
+                <div>
+                    <label class="font-semibold text-slate-700 block mb-1">Supabase Anon Key</label>
+                    <input type="password" id="sp-key" placeholder="eyJhbGciOiJIUzI1NiI..."
+                        class="w-full border border-slate-300 rounded-lg p-2.5">
+                </div>
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 text-slate-500">
+                    <span class="font-bold text-slate-700">Current Mode:</span> <span id="sp-status-text"
+                        class="text-emerald-600 font-semibold">Local Storage Mode</span>
+                </div>
+            </div>
+            <div class="bg-slate-100 px-6 py-3 border-t border-slate-200 flex justify-end space-x-2">
+                <button onclick="toggleModal('supabase-modal', false)"
+                    class="px-3 py-1.5 text-slate-600 text-xs">Close</button>
+                <button onclick="saveSupabaseConfig()"
+                    class="bg-slate-800 hover:bg-slate-900 text-white text-xs px-4 py-1.5 rounded-lg">Save
+                    Settings</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script src="js/app.js"></script>
+</body>
+
+</html>
